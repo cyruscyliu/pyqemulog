@@ -4,6 +4,9 @@ This is the [qemu-log](https://github.com/organix/qemu-log) ported to Python.
 
 QEMU log parsing utility.
 
+## contribution
+It's welcome to contribute pyqemulog. We still need to support other -d flags and other architecuters(MIPS...).
+
 ## Installation
 ```shell script
 git clone https://github.com/cyruscyliu/pyqemulog.git 
