@@ -1,0 +1,12 @@
+#! /usr/bin/python
+import argparse
+from pyqemulog import run
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--lines', help='display each line of the log')
+    group.add_argument('--parse', help='parse each line of the log', )
+
+    args = parser.parse_args()
+    run(args)

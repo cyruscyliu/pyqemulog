@@ -1,7 +1,4 @@
-#! /usr/bin/python
-
 import json
-import argparse
 
 
 def do_lines(path_to_qemulog):
@@ -62,15 +59,7 @@ def load_cpurf(path_to_qemulog, dump=True):
         return cpurfs
     # dump
     with open('cpu.json', 'w') as f:
-        c = 0
-        dump = {}
-        for k, v, in cpurfs.items():
-            c += 1
-            if c > 100:
-                break
-            dump[k] = v
-        json.dump(dump, f)
-        # json.dump(cpurfs, f)
+        json.dump(cpurfs, f)
     return cpurfs
 
 
@@ -121,20 +110,12 @@ def load_in_asm(path_to_qemulog, dump=True):
         return bbs
     # dump
     with open('in_asm.json', 'w') as f:
-        c = 0
-        dump = {}
-        for k, v in bbs.items():
-            c += 1
-            if c > 100:
-                break
-            dump[k] = v
-        json.dump(dump, f)
-        # json.dump(bbs, f)
+        json.dump(bbs, f)
     return bbs
 
 
 def do_parse(path_to_qemulog):
-    # load_in_asm(path_to_qemulog)
+    load_in_asm(path_to_qemulog)
     load_cpurf(path_to_qemulog)
 
 
@@ -146,13 +127,3 @@ def run(args):
     else:
         # will never be executed
         raise NotImplementedError('see help')
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--lines', help='display each line of the log')
-    group.add_argument('--parse', help='parse each line of the log', )
-
-    args = parser.parse_args()
-    run(args)
