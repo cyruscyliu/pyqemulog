@@ -94,11 +94,11 @@ def load_in_asm(path_to_qemulog, dump=True):
                 offset, address, raw, opcode, operand = parse_in_asm(line)
                 bb_id = address
                 bbs[bb_id] = {'in': address, 'instructions': [
-                    {'ln': offset, 'address': address, 'raw': raw, 'opcode': opcode, 'oprand': operand}]}
+                    {'ln': offset, 'address': address, 'raw': raw, 'opcode': opcode, 'operand': operand}]}
             if state == 4 and len(line.strip()):
                 offset, address, raw, opcode, operand = parse_in_asm(line)
                 bbs[bb_id]['instructions'].append(
-                    {'ln': offset, 'address': address, 'raw': raw, 'opcode': opcode, 'oprand': operand})
+                    {'ln': offset, 'address': address, 'raw': raw, 'opcode': opcode, 'operand': operand})
             if state in [1, 2, 3]:
                 state += 1
             if state == 4 and not len(line.strip()):
