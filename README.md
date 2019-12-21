@@ -17,24 +17,14 @@ cd pyqemulog && sudo -H pip3.7 install .
 
 ### apis
 ```python
-from pyqemulog  import load_cpurf, load_in_asm
+from pyqemulog import load_cpurf, load_in_asm, get_bb
 
 path_to_qemulog = 'log.txt'
 cpurfs = load_cpurf(path_to_qemulog, dump=False) # get all cpu register files
 bbs = load_in_asm(path_to_qemulog, dump=False) # get all basic blocks
 
 for cpurf in cpurfs.values():
-    bb_id = cpurf['register_files']['R15']
-
-    target_bb = bbs[bb_id]
-    max_ln = cpurf['ln']
-    while(target_bb['instructions'][-1] < max_ln):
-        if target_bb['chained']:
-            next_bb = target_bb['next']
-            if next_bb['instructions'][-1] > max_ln:    
-
-    
-
+    bb = get_bb(cpurf, bbs)
     print(bb) # cpurf's basic blocks
     print(cpurf) # bb's cpu register files
 ```
