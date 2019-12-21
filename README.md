@@ -25,13 +25,18 @@ bbs = load_in_asm(path_to_qemulog, dump=False) # get all basic blocks
 
 for cpurf in cpurfs.values():
     bb_id = cpurf['register_files']['R15']
-    bb = bbs[bb_id]
+
+    target_bb = bbs[bb_id]
+    max_ln = cpurf['ln']
+    while(target_bb['instructions'][-1] < max_ln):
+        if target_bb['chained']:
+            next_bb = target_bb['next']
+            if next_bb['instructions'][-1] > max_ln:    
+
+    
+
     print(bb) # cpurf's basic blocks
     print(cpurf) # bb's cpu register files
-```
-```text
-{'in': '00000000', 'instructions': [{'ln': 3, 'address': '00000000', 'raw': 'e3a00000', 'opcode': 'mov', 'operand': ['r0,', '#0']}, {'ln': 4, 'address': '00000004', 'raw': 'e59f1004', 'opcode': 'ldr', 'operand': ['r1,', '[pc,', '#4]']}, {'ln': 5, 'address': '00000008', 'raw': 'e59f2004', 'opcode': 'ldr', 'operand': ['r2,', '[pc,', '#4]']}, {'ln': 6, 'address': '0000000c', 'raw': 'e59ff004', 'opcode': 'ldr', 'operand': ['pc,', '[pc,', '#4]']}], 'size': 4}
-{'id': 0, 'ln': 8, 'register_files': {'R00': '00000000', 'R01': '00000000', 'R02': '00000000', 'R03': '00000000', 'R04': '00000000', 'R05': '00000000', 'R06': '00000000', 'R07': '00000000', 'R08': '00000000', 'R09': '00000000', 'R10': '00000000', 'R11': '00000000', 'R12': '00000000', 'R13': '00000000', 'R14': '00000000', 'R15': '00000000', 'PSR': '400001d3'}, 'mode': 'svc32'}
 ```
 
 ### command line
@@ -47,62 +52,39 @@ pyqemulog --lines log.txt
 pyqemulog --parse log.txt
 ```
 
-##### in_asm
+##### in_asm (basic blocks)
 Target assembly code instructions corresponding to block with entry at [in_asm.json](in_asm.json).
 ```text
 {
-  "00000000": {
-    "in": "00000000",
-    "instructions": [
-      {
-        "ln": 3,
-        "address": "00000000",
-        "raw": "e3a00000",
-        "opcode": "mov",
-        "operand": [
-          "r0,",
-          "#0"
-        ]
+  "00008000": {
+    "in": "00008000",
+    "chained": true,
+    "instructions": [{ 
+        "ln": 15, "address": "00008000", "raw": "e3a01c06", "opcode": "mov",
+        "operand": [ "r1,", "#0x600" ]
+      }, {
+        "ln": 16, "address": "00008004", "raw": "e3811061", "opcode": "orr",
+        "operand": ["r1,", "r1,", "#0x61"]
+      }, {
+        "ln": 17, "address": "00008008", "raw": "e1a00000", "opcode": "mov",
+        "operand": ["r0,", "r0"]
       },
-      {
-        "ln": 4,
-        "address": "00000004",
-        "raw": "e59f1004",
-        "opcode": "ldr",
-        "operand": [
-          "r1,",
-          "[pc,",
-          "#4]"
-        ]
-      },
-      {
-        "ln": 5,
-        "address": "00000008",
-        "raw": "e59f2004",
-        "opcode": "ldr",
-        "operand": [
-          "r2,",
-          "[pc,",
-          "#4]"
-        ]
-      },
-      {
-        "ln": 6,
-        "address": "0000000c",
-        "raw": "e59ff004",
-        "opcode": "ldr",
-        "operand": [
-          "pc,",
-          "[pc,",
-          "#4]"
-        ]
-      }
+      ....
     ],
-    "size": 4
+    "size": 11,
+    "next": {
+      "in": "00008000",
+      "chained": false,
+      "instructions": [{
+          "ln": 3677, "address": "00008000", "raw": "e321f0d3", "opcode": "msr",
+          "operand": ["cpsr_c,", "#0xd3"]
+        }],
+      "size": 1
+    }
   },
 }
 ```
-##### cpu
+##### cpu (execution)
 Target assembly cpu register files at [cpu.json](cpu.json).
 ```text
 {

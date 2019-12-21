@@ -93,16 +93,25 @@ def load_in_asm(path_to_qemulog, dump=True):
             if state == 3:
                 offset, address, raw, opcode, operand = parse_in_asm(line)
                 bb_id = address
-                bbs[bb_id] = {'in': address, 'instructions': [
+                new_bb = {'in': address, 'chained': False, 'instructions': [
                     {'ln': offset, 'address': address, 'raw': raw, 'opcode': opcode, 'operand': operand}]}
+                if bb_id in bbs:
+                    chained_bb = bbs[bb_id]
+                    while chained_bb['chained'] and 'next' in chained_bb:
+                        chained_bb = chained_bb['next']
+                    chained_bb['chained'] = True
+                    chained_bb['next'] = new_bb
+                else:
+                    new_bb['chained'] = False
+                    bbs[bb_id] = new_bb
             if state == 4 and len(line.strip()):
                 offset, address, raw, opcode, operand = parse_in_asm(line)
-                bbs[bb_id]['instructions'].append(
+                new_bb['instructions'].append(
                     {'ln': offset, 'address': address, 'raw': raw, 'opcode': opcode, 'operand': operand})
             if state in [1, 2, 3]:
                 state += 1
             if state == 4 and not len(line.strip()):
-                bbs[bb_id]['size'] = len(bbs[bb_id]['instructions'])
+                new_bb['size'] = len(new_bb['instructions'])
                 state = 0
             ln += 1
 
@@ -117,6 +126,22 @@ def load_in_asm(path_to_qemulog, dump=True):
 def do_parse(path_to_qemulog):
     load_in_asm(path_to_qemulog)
     load_cpurf(path_to_qemulog)
+
+
+def get_bb(cpurf, bbs):
+    bb_id = cpurf['register_files']['R15']
+
+    target_bb = bbs[bb_id]
+    max_ln = cpurf['ln']
+    while target_bb['instructions'][-1]['ln'] < max_ln:
+        if not target_bb['chained']:
+            break
+        next_bb = target_bb['next']
+        if next_bb['instructions'][-1]['ln'] > max_ln:
+            break
+        else:
+            target_bb = next_bb
+    return target_bb
 
 
 def run(args):
