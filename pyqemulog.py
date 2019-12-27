@@ -7,17 +7,21 @@ def do_lines(path_to_qemulog):
             print(line, end='')
 
 
+exception_names = ['rst', 'und', 'sint', 'pabt', 'dabt', 'reserved', 'irq', 'fiq']
+
+
 def load_cpurf(path_to_qemulog, dump=True):
     """
-    R00=00000055 R01=000e11b0 R02=000f21c4 R03=00000661 1 <- 0
-    R04=00000055 R05=00000001 R06=0000b9b0 R07=000e1170 2
-    R08=000000a0 R09=00000000 R10=000e11b4 R11=000e2178 3
-    R12=000e217c R13=000e215c R14=00008e24 R15=00008d80 4
-    PSR=200001d3 --C- A svc32                           5
-    Taking exception 4 [Data Abort]                     6 -> 1 or 0
-    ...from EL1 to EL1                                  7
-    ...with ESR 0x25/0x9600003f                         8
-    ...with DFSR 0x8 DFAR 0xf1012014                    9 -> 0
+    R00=00000055 R01=000e11b0 R02=000f21c4 R03=00000661    1 <- 0
+    R04=00000055 R05=00000001 R06=0000b9b0 R07=000e1170    2
+    R08=000000a0 R09=00000000 R10=000e11b4 R11=000e2178    3
+    R12=000e217c R13=000e215c R14=00008e24 R15=00008d80    4
+    PSR=200001d3 --C- A svc32                              5
+    Taking exception 4 [Data Abort]                        6 -> 1 or 0
+    ...from EL1 to EL1                                     7
+    ...with ESR 0x25/0x9600003f                            8
+    ...with DFSR 0x8 DFAR 0xf1012014                       9 -> 0
+    Exception return from AArch32 abt to svc PC 0xc0020a00 6-> 1 or 0
     """
     ln = 0
     cpurfs = {}
@@ -37,9 +41,6 @@ def load_cpurf(path_to_qemulog, dump=True):
         return offset, rfs
 
     cpurf_id = 0
-    exception_names = [
-        'Reset', 'Undefined Instruction', 'software Interrupt', 'Prefetch  Abort',
-        'Data Abort', 'Reserved', 'IRQ', 'FIQ']
     with open(path_to_qemulog) as f:
         state = 0
         for line in f:
@@ -68,10 +69,14 @@ def load_cpurf(path_to_qemulog, dump=True):
                 elif line.startswith('Taking exception'):
                     exception_type = int(line.strip().split()[2])
                     exception_name = exception_names[exception_type]
-                    cpurfs[cpurf_id]['exception'] = {'type': exception_type, 'name': exception_name}
+                    cpurfs[cpurf_id]['exception'] = {'type': exception_name}
+                elif line.startswith('Exception return'):
+                    _, _, _, _, f, _, t, _, pc = line.strip().split()
+                    cpurfs[cpurf_id]['exception'] = {'type': 'ret', 'from': f, 'to': t, 'pc': pc}
+                    state = 10
                 else:
                     state = 10
-            if state in [1, 2, 3, 4, 5, 7, 8, 9]:
+            if state in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
                 state += 1
             if state == 10:
                 state = 0
@@ -165,6 +170,40 @@ def get_bb(cpurf, bbs):
         else:
             target_bb = next_bb
     return target_bb
+
+
+def get_last_cpurf(cpurf, cpurfs):
+    try:
+        return cpurfs[cpurf['id'] - 1]
+    except KeyError:
+        return None
+
+
+def get_next_cpurf(cpurf, cpurfs):
+    try:
+        return cpurfs[cpurf['id'] + 1]
+    except KeyError:
+        return None
+
+
+def get_last_bb(cpurf, cpurfs, bbs):
+    return get_bb(get_last_cpurf(cpurf, cpurfs), bbs)
+
+
+def get_next_bb(cpurf, cpurfs, bbs):
+    return get_bb(get_next_cpurf(cpurf, cpurfs), bbs)
+
+
+def get_exception_return_cpurf(cpurf, cpurfs):
+    while cpurf:
+        if 'exception' in cpurf and cpurf['exception']['type'] == 'ret':
+            break
+        cpurf = get_next_cpurf(cpurf, cpurfs)
+    return cpurf
+
+
+def get_exception_return_bb(cpurf, cpurfs, bbs):
+    return get_bb(get_exception_return_cpurf(cpurf, cpurfs), bbs)
 
 
 def run(args):

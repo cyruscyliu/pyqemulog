@@ -9,4 +9,5 @@ if __name__ == '__main__':
     group.add_argument('--parse', help='parse each line of the log', )
 
     args = parser.parse_args()
+
     run(args)

@@ -78,7 +78,7 @@ Target assembly code instructions corresponding to block with entry at [in_asm.j
 Target assembly cpu register files at [cpu.json](cpu.json).
 ```text
 {
-  "37": {
+  37: {
     "id": 37,
     "ln": 529,
     "register_files": {
