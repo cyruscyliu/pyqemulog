@@ -22,6 +22,7 @@ def load_cpurf(path_to_qemulog, dump=True):
     ...with ESR 0x25/0x9600003f                            8
     ...with DFSR 0x8 DFAR 0xf1012014                       9 -> 0
     Exception return from AArch32 abt to svc PC 0xc0020a00 6-> 1 or 0
+    AArch32 mode switch from irq to abt PC 0xc000af4c      6-> 1 or 0
     """
     ln = 0
     cpurfs = {}
@@ -73,6 +74,10 @@ def load_cpurf(path_to_qemulog, dump=True):
                 elif line.startswith('Exception return'):
                     _, _, _, _, f, _, t, _, pc = line.strip().split()
                     cpurfs[cpurf_id]['exception'] = {'type': 'ret', 'from': f, 'to': t, 'pc': pc}
+                    state = 10
+                elif line.find('mode switch') != -1:
+                    _, _, _, _, f, _, t, _, pc = line.strip().split()
+                    cpurfs[cpurf_id]['exception'] = {'type': 'switch', 'from': f, 'to': t, 'pc': pc}
                     state = 10
                 else:
                     state = 10
