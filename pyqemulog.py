@@ -7,7 +7,7 @@ def do_lines(path_to_qemulog):
             print(line, end='')
 
 
-exception_names = ['rst', 'und', 'sint', 'pabt', 'dabt', 'reserved', 'irq', 'fiq']
+exception_names = ['unknown', 'unknown', 'unknown', 'unknown', 'dabt', 'irq']
 
 
 def load_cpurf(path_to_qemulog, dump=True):
@@ -23,6 +23,9 @@ def load_cpurf(path_to_qemulog, dump=True):
     ...with DFSR 0x8 DFAR 0xf1012014                       9 -> 0
     Exception return from AArch32 abt to svc PC 0xc0020a00 6-> 1 or 0
     AArch32 mode switch from irq to abt PC 0xc000af4c      6-> 1 or 0
+    Taking exception 5 [IRQ]                               6-> 1 or 0
+    ...from EL1 to EL1                                     7
+    ...with ESR 0x0/0x0                                    8 -> 0
     """
     ln = 0
     cpurfs = {}
@@ -80,6 +83,9 @@ def load_cpurf(path_to_qemulog, dump=True):
                     cpurfs[cpurf_id]['exception'] = {'type': 'switch', 'from': f, 'to': t, 'pc': pc}
                     state = 10
                 else:
+                    state = 10
+            if state == 8:
+                if exception_type == 5:  # irq
                     state = 10
             if state in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
                 state += 1
