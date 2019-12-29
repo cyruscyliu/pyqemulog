@@ -7,7 +7,7 @@ def do_lines(path_to_qemulog):
             print(line, end='')
 
 
-exception_names = ['unknown', 'unknown', 'unknown', 'unknown', 'dabt', 'irq']
+exception_names = ['unknown', 'unknown', 'svc', 'pabt', 'dabt', 'irq']
 
 
 def load_cpurf(path_to_qemulog, dump=True):
@@ -17,15 +17,19 @@ def load_cpurf(path_to_qemulog, dump=True):
     R08=000000a0 R09=00000000 R10=000e11b4 R11=000e2178    3
     R12=000e217c R13=000e215c R14=00008e24 R15=00008d80    4
     PSR=200001d3 --C- A svc32                              5
-    Taking exception 4 [Data Abort]                        6 -> 1 or 0
+    AArch32 mode switch from irq to abt PC 0xc000af4c      6 -> 2 or 0 or 6
+    Exception return from AArch32 abt to svc PC 0xc0020a00 6 -> 2 or 0 or 6
+    Taking exception 4 [Data Abort]                        6 -> 2 or 0 or 6
     ...from EL1 to EL1                                     7
     ...with ESR 0x25/0x9600003f                            8
     ...with DFSR 0x8 DFAR 0xf1012014                       9 -> 0
-    Exception return from AArch32 abt to svc PC 0xc0020a00 6-> 1 or 0
-    AArch32 mode switch from irq to abt PC 0xc000af4c      6-> 1 or 0
-    Taking exception 5 [IRQ]                               6-> 1 or 0
+    Taking exception 5 [IRQ]                               6 -> 2 or 0 or 6
     ...from EL1 to EL1                                     7
     ...with ESR 0x0/0x0                                    8 -> 0
+    Taking exception 3 [Prefetch Abort]                    6 -> 2 or 0 or 6
+    ...from EL0 to EL1                                     7
+    ...with ESR 0x20/0x8200003f                            8
+    ...with IFSR 0x17 IFAR 0x400009b0                      9
     """
     ln = 0
     cpurfs = {}
@@ -73,19 +77,22 @@ def load_cpurf(path_to_qemulog, dump=True):
                 elif line.startswith('Taking exception'):
                     exception_type = int(line.strip().split()[2])
                     exception_name = exception_names[exception_type]
-                    cpurfs[cpurf_id]['exception'] = {'type': exception_name}
+                    if 'exception' in cpurfs[cpurf_id]:
+                        cpurfs[cpurf_id]['exception']['type'] = exception_name
+                    else:
+                        cpurfs[cpurf_id]['exception'] = {'type': exception_name}
                 elif line.startswith('Exception return'):
                     _, _, _, _, f, _, t, _, pc = line.strip().split()
-                    cpurfs[cpurf_id]['exception'] = {'type': 'ret', 'from': f, 'to': t, 'pc': pc}
-                    state = 10
+                    cpurfs[cpurf_id]['exception'] = {'ret': True, 'from': f, 'to': t, 'pc': pc}
+                    state = 5
                 elif line.find('mode switch') != -1:
                     _, _, _, _, f, _, t, _, pc = line.strip().split()
-                    cpurfs[cpurf_id]['exception'] = {'type': 'switch', 'from': f, 'to': t, 'pc': pc}
+                    cpurfs[cpurf_id]['exception'] = {'switch': True, 'from': f, 'to': t, 'pc': pc}
                     state = 10
                 else:
                     state = 10
             if state == 8:
-                if exception_type == 5:  # irq
+                if exception_type in [2, 5]:  # irq
                     state = 10
             if state in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
                 state += 1
