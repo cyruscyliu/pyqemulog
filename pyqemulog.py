@@ -214,7 +214,7 @@ def get_next_bb(cpurf, cpurfs, bbs):
 
 def get_exception_return_cpurf(cpurf, cpurfs):
     while cpurf:
-        if 'exception' in cpurf and cpurf['exception']['type'] == 'ret':
+        if 'exception' in cpurf and 'ret' in cpurf['exception'] and cpurf['exception']['ret']:
             break
         cpurf = get_next_cpurf(cpurf, cpurfs)
     return cpurf
