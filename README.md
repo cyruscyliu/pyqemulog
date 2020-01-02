@@ -1,11 +1,13 @@
 # pyqemu-log
 
 This is the [qemu-log](https://github.com/organix/qemu-log) ported to Python.
-
-QEMU log parsing utility.
+As a matter of fact, this project is better than qemu-log. We provide you with
+more interfaces and support of more architectures.
 
 ## contribution
-It's welcome to contribute pyqemulog. We still need to support other -d flags and other architecuters(MIPS...).
+It's welcome to contribute pyqemulog.
+
+We now support both ARM32 and MIPS32 with cpu,in_asm,int flags.
 
 ## Installation
 ```shell script
@@ -17,33 +19,28 @@ cd pyqemulog && sudo -H pip3.7 install .
 
 ### apis
 ```python
-from pyqemulog import load_cpurf, load_in_asm, get_bb
+from pyqemulog import get_pql
 
 path_to_qemulog = 'log.txt'
-cpurfs = load_cpurf(path_to_qemulog, dump=False) # get all cpu register files
-bbs = load_in_asm(path_to_qemulog, dump=False) # get all basic blocks
+pql = get_pql('aarch32', 'little', path_to_qemulog)
+pql.load_cpurf()
+pql.load_in_asm()
 
-for cpurf in cpurfs.values():
-    bb = get_bb(cpurf, bbs)
+for cpurf in pql.cpurfs.values():
+    bb = pql.get_bb(cpurf)
     print(bb) # cpurf's basic blocks
     print(cpurf) # bb's cpu register files
 ```
 
 ### command line
 
-#### pyqemulog lines
-```shell script
-pyqemulog --lines log.txt
-... each line of log is displayed ...
-```
-
 #### pyqemulog parse
 ```shell script
-pyqemulog --parse log.txt
+pyqemulog aarch32 little log.txt
 ```
 
 ##### in_asm (basic blocks)
-Target assembly code instructions corresponding to block with entry at [in_asm.json](in_asm.json).
+Target assembly code instructions corresponding to block with entry at [in_asm.json](tests/in_asm.json).
 ```text
 {
   "00008000": {
@@ -75,7 +72,7 @@ Target assembly code instructions corresponding to block with entry at [in_asm.j
 }
 ```
 ##### cpu[,int] (execution)
-Target assembly cpu register files at [cpu.json](cpu.json).
+Target assembly cpu register files at [cpu.json](tests/cpu.json).
 ```text
 {
   37: {
