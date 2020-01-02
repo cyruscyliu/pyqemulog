@@ -1,13 +1,16 @@
 #! /usr/bin/python
 import argparse
-from pyqemulog import run
+
+from pyqemulog import get_pql
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--lines', help='display each line of the log')
-    group.add_argument('--parse', help='parse each line of the log', )
+    parser.add_argument('arch', help='architecture', choices=['aarch32', 'mips32'])
+    parser.add_argument('endian', help='endianness', choices=['little', 'big'])
+    parser.add_argument('parse', help='parse lines of log', metavar='path/to/log')
 
     args = parser.parse_args()
 
-    run(args)
+    pql = get_pql(args.arch, args.endian, args.parse)
+    pql.load_cpurf()
+    pql.load_in_asm()
