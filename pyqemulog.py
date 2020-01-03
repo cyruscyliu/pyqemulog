@@ -262,11 +262,33 @@ class PQL_MIPS32(PQLI):
         ln = 0
         cpurfs = {}
 
+        def parse_state(line):
+            """
+            SR: Soft-Reset, 20
+            NMI: Non-Maskable-Interrupt, 19
+            IM7-0: Interrupt-Mask, 15-8
+            KSU: Kernel-Supervise-User, 4-3
+            """
+            status = int(line.strip().split()[2], 16)
+            mode_value = status >> 3 & 0xFF
+            if mode_value == 0:
+                mode = 'kernel'
+            elif mode_value == 1:
+                mode = 'supervisor'
+            elif mode_value == 2:
+                mode = 'user'
+            else:
+                raise ValueError('bad status register')
+            return mode
+
         def parse_rfs(line, ref=4, off=1):
             things = line.strip().split()
             rfs = {}
             for i in range(0, ref):
-                rfs[things[off + 2 * i]] = things[off + 1 + 2 * i]
+                value = things[off + 1 + 2 * i]
+                if value.startswith('0x'):
+                    value = value[2:]
+                rfs[things[off + 2 * i]] = value
             offset = ln + 1
             return offset, rfs
 
@@ -283,9 +305,11 @@ class PQL_MIPS32(PQLI):
                     for rf_name, rf_value in rfs.items():
                         cpurfs[cpurf_id]['register_files'][rf_name] = rf_value
                 if state in [10]:
+                    mode = parse_state(line)
                     _, rfs = parse_rfs(line, ref=3, off=1)
                     for rf_name, rf_value in rfs.items():
                         cpurfs[cpurf_id]['register_files'][rf_name] = rf_value
+                    cpurfs[cpurf_id]['mode'] = mode
                 if state in [11]:
                     _, rfs = parse_rfs(line, ref=3, off=0)
                     for rf_name, rf_value in rfs.items():
