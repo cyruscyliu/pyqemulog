@@ -242,6 +242,15 @@ class PQL_AARCH32(PQLI):
 class PQL_MIPS32(PQLI):
     def __init__(self, endian, path_to_qemulog):
         super().__init__(endian, path_to_qemulog)
+        self.exception_names = [
+            'int', 'mod', 'tlbl', 'tlbs', 'adel',
+            'ades', 'ibe', 'dbe', 'syscall', 'bp',
+            'ri', 'cpu', 'ov', 'trap', 'reserved',
+            'fpe', 'reserved', 'reserved', 'c23', 'reserved',
+            'reserved', 'reserved', 'mdmx', 'watch', 'mcheck',
+            'thread', 'dsp', 'reserved', 'reserved', 'reserved',
+            'cacheerr', 'reserved'
+        ]
 
     def load_cpurf(self, dump=True):
         """
@@ -258,6 +267,14 @@ class PQL_MIPS32(PQLI):
             Config0 0x80000482 Config1 0x9e190c8f LLAddr 0x0000000000000000 11
             Config2 0x80000000 Config3 0x00000c20                           12
             Config4 0x00000000 Config5 0x00000000                           13
+        do_raise_exception_err: 28 0                                                            14
+        mips_cpu_do_interrupt enter: PC 801d0e9c EPC 00000000 data bus error exception          15
+        mips_cpu_do_interrupt: PC bfc00380 EPC 801d0e9c cause 7                                 16
+            S 10400002 C 0000001c A 00000000 D 00000000                                         17
+        do_raise_exception_err: 15 0                                                            14
+        mips_cpu_do_interrupt enter: PC bfc00380 EPC 801d0e9c instruction bus error exception   15
+        mips_cpu_do_interrupt: PC bfc00380 EPC 801d0e9c cause 6                                 16
+            S 10400002 C 00000018 A 00000000 D 00000000                                         17
         """
         ln = 0
         cpurfs = {}
@@ -318,13 +335,37 @@ class PQL_MIPS32(PQLI):
                     _, rfs = parse_rfs(line, ref=2, off=0)
                     for rf_name, rf_value in rfs.items():
                         cpurfs[cpurf_id]['register_files'][rf_name] = rf_value
-                if state in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]:
-                    state += 1
                 if state == 14:
+                    if line.startswith('pc='):
+                        cpurf_id += 1
+                        state = 1
+                        offset, rfs = ln + 1, {'pc': line.strip().split()[-2]}
+                        cpurfs[cpurf_id] = {'id': cpurf_id, 'ln': offset, 'register_files': rfs}
+                    elif line.startswith('do_raise_exception_err'):
+                        pass
+                    else:
+                        state = 18
+                if state == 16:
+                    exception_type = int(line.strip().split()[-1])
+                    exception_name = self.exception_names[exception_type]
+                    if 'exception' in cpurfs[cpurf_id]:
+                        # no need for exception chain
+                        # cpurfs[cpurf_id]['exception']['type'] = exception_name
+                        pass
+                    else:
+                        cpurfs[cpurf_id]['exception'] = {'type': exception_name}
+                    epc = line.strip().split()[-3]
+                    cpurfs[cpurf_id]['register_files']['EPC'] = epc
+                if state == 17:
+                    state = 13
+                if state in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]:
+                    state += 1
+                if state == 18:
                     state = 0
                     cpurf_id += 1
                 ln += 1
 
+        self.cpurfs = cpurfs
         if not dump:
             return
 

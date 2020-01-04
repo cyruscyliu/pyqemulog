@@ -99,3 +99,20 @@ CP0 Status  0x10400000 Cause   0x00000000 EPC    0x00000000
     Config0 0x80000482 Config1 0x9e190c8f LLAddr 0x0000000000000000
     Config2 0x80000000 Config3 0x00000c20
     Config4 0x00000000 Config5 0x00000000
+do_raise_exception_err: 28 0
+mips_cpu_do_interrupt enter: PC 801d0e9c EPC 00000000 data bus error exception
+mips_cpu_do_interrupt: PC bfc00380 EPC 801d0e9c cause 7
+    S 10400002 C 0000001c A 00000000 D 00000000
+do_raise_exception_err: 15 0
+mips_cpu_do_interrupt enter: PC bfc00380 EPC 801d0e9c instruction bus error exception
+mips_cpu_do_interrupt: PC bfc00380 EPC 801d0e9c cause 6
+    S 10400002 C 00000018 A 00000000 D 00000000
+do_raise_exception_err: 15 0
+mips_cpu_do_interrupt enter: PC bfc00380 EPC 801d0e9c instruction bus error exception
+mips_cpu_do_interrupt: PC bfc00380 EPC 801d0e9c cause 6
+    S 10400002 C 00000018 A 00000000 D 00000000
+do_raise_exception_err: 15 0
+mips_cpu_do_interrupt enter: PC bfc00380 EPC 801d0e9c instruction bus error exception
+mips_cpu_do_interrupt: PC bfc00380 EPC 801d0e9c cause 6
+    S 10400002 C 00000018 A 00000000 D 00000000
+
