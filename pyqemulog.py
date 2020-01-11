@@ -315,7 +315,7 @@ class PQL_MIPS32(PQLI):
             for line in f:
                 if state == 0 and line.startswith('pc='):
                     state = 1
-                    offset, rfs = ln + 1, {'pc': line.strip().split()[-2]}
+                    offset, rfs = ln + 1, {'pc': line.strip().split()[0][5:]}
                     cpurfs[cpurf_id] = {'id': cpurf_id, 'ln': offset, 'register_files': rfs}
                 if state in [2, 3, 4, 5, 6, 7, 8, 9]:
                     _, rfs = parse_rfs(line, ref=4, off=1)
@@ -343,6 +343,8 @@ class PQL_MIPS32(PQLI):
                         cpurfs[cpurf_id] = {'id': cpurf_id, 'ln': offset, 'register_files': rfs}
                     elif line.startswith('do_raise_exception_err'):
                         pass
+                    elif line.startswith('---'):
+                        state = 18
                     else:
                         state = 18
                 if state == 16:
