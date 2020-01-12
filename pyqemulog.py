@@ -339,7 +339,7 @@ class PQL_MIPS32(PQLI):
                     if line.startswith('pc='):
                         cpurf_id += 1
                         state = 1
-                        offset, rfs = ln + 1, {'pc': line.strip().split()[-2]}
+                        offset, rfs = ln + 1, {'pc': line.strip().split()[0][5:]}
                         cpurfs[cpurf_id] = {'id': cpurf_id, 'ln': offset, 'register_files': rfs}
                     elif line.startswith('do_raise_exception_err'):
                         pass
