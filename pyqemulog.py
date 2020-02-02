@@ -38,9 +38,12 @@ class PQLI(object):
             things = line.strip().split()
             address = things[0][2:-1]  # remove 0x and :
             raw = things[1]
+            offset = ln + 1
+            if len(things) < 3:
+                # disassembler disagrees
+                return offset, address, raw, None, None
             opcode = things[2]
             operand = things[3:]
-            offset = ln + 1
             return offset, address, raw, opcode, operand
 
         with open(self.path_to_qemulog) as f:
@@ -287,7 +290,7 @@ class PQL_MIPS32(PQLI):
             KSU: Kernel-Supervise-User, 4-3
             """
             status = int(line.strip().split()[2], 16)
-            mode_value = status >> 3 & 0xFF
+            mode_value = status >> 3 & 0x3
             if mode_value == 0:
                 mode = 'kernel'
             elif mode_value == 1:
@@ -345,6 +348,11 @@ class PQL_MIPS32(PQLI):
                         pass
                     elif line.startswith('---'):
                         state = 18
+                    else:
+                        state = 18
+                if state == 15:
+                    if line.startswith('mips_cpu_do_interrupt'):
+                        pass
                     else:
                         state = 18
                 if state == 16:
