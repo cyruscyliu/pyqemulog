@@ -166,7 +166,13 @@ class PQL_AARCH32(PQLI):
         cpurfs = {}
 
         def parse_state(line):
-            psr, flags, _, mode = line.strip().split()
+            # PSR=200001d3 --C- A svc32                              5
+            # PSR=400001d3 -Z-- A NS svc32
+            things = line.strip().split()
+            if len(things) == 4:
+                psr, flags, _, mode = things
+            elif len(things) == 5:
+                psr, flags, _, _, mode = things
             psr_name, _, psr_value = psr.partition('=')
             return psr_name, psr_value, flags, None, mode
 
