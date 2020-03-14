@@ -136,7 +136,7 @@ class PQLI(object):
 class PQL_AARCH32(PQLI):
     def __init__(self, endian, path_to_qemulog):
         super().__init__(endian, path_to_qemulog)
-        self.exception_names = ['unknown', 'unknown', 'svc', 'pabt', 'dabt', 'irq']
+        self.exception_names = ['unknown', 'ui', 'svc', 'pabt', 'dabt', 'irq']
 
     def get_pc(self, cpurf):
         return cpurf['register_files']['R15']
@@ -161,6 +161,9 @@ class PQL_AARCH32(PQLI):
         ...from EL0 to EL1                                     7
         ...with ESR 0x20/0x8200003f                            8
         ...with IFSR 0x17 IFAR 0x400009b0                      9
+        Taking exception 1 [Undefined Instruction]             6 -> 2 or 0 or 6
+        ...from EL1 to EL1                                     7
+        ...with ESR 0x0/0x2000000                              8 -> 0
         """
         ln = 0
         cpurfs = {}
@@ -202,6 +205,7 @@ class PQL_AARCH32(PQLI):
                     cpurfs[cpurf_id]['register_files'][psr_name] = psr_value
                     cpurfs[cpurf_id]['mode'] = mode
                 if state == 9:
+                    print(line, ln)
                     dfr_name_value = line.strip().split()[1:]
                     for i in range(0, len(dfr_name_value), 2):
                         cpurfs[cpurf_id]['register_files'][dfr_name_value[i]] = dfr_name_value[i + 1]
@@ -229,7 +233,7 @@ class PQL_AARCH32(PQLI):
                     else:
                         state = 10
                 if state == 8:
-                    if exception_type in [2, 5]:  # irq
+                    if exception_type in [1, 2, 5]:  # irq
                         state = 10
                 if state in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
                     state += 1
