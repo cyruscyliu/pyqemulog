@@ -85,6 +85,10 @@ class PQLI(object):
             json.dump(bbs, f)
 
     @abc.abstractmethod
+    def get_ra(self, cpurf):
+        pass
+
+    @abc.abstractmethod
     def get_pc(self, cpurf):
         pass
 
@@ -136,7 +140,15 @@ class PQLI(object):
 class PQL_AARCH32(PQLI):
     def __init__(self, endian, path_to_qemulog):
         super().__init__(endian, path_to_qemulog)
-        self.exception_names = ['unknown', 'ui', 'svc', 'pabt', 'dabt', 'irq']
+        self.exception_names = [
+            'unknown', 'ui', 'svc', 'pabt', 'dabt', 'irq',
+            #   0       1      2       3       4      5
+            'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'hyp'
+            #   6          7          8          9          10      11
+        ]
+
+    def get_ra(self, cpurf):
+        return cpurf['register_files']['R14']
 
     def get_pc(self, cpurf):
         return cpurf['register_files']['R15']
@@ -164,6 +176,9 @@ class PQL_AARCH32(PQLI):
         Taking exception 1 [Undefined Instruction]             6 -> 2 or 0 or 6
         ...from EL1 to EL1                                     7
         ...with ESR 0x0/0x2000000                              8 -> 0
+        Taking exception 11 [Hypervisor Call]                  6 -> 2 or 0 or 6
+        ...from EL1 to EL2                                     7
+        ...with ESR 0x12/0x4a000000                            8 -> 0
         """
         ln = 0
         cpurfs = {}
@@ -205,7 +220,6 @@ class PQL_AARCH32(PQLI):
                     cpurfs[cpurf_id]['register_files'][psr_name] = psr_value
                     cpurfs[cpurf_id]['mode'] = mode
                 if state == 9:
-                    print(line, ln)
                     dfr_name_value = line.strip().split()[1:]
                     for i in range(0, len(dfr_name_value), 2):
                         cpurfs[cpurf_id]['register_files'][dfr_name_value[i]] = dfr_name_value[i + 1]
@@ -233,7 +247,7 @@ class PQL_AARCH32(PQLI):
                     else:
                         state = 10
                 if state == 8:
-                    if exception_type in [1, 2, 5]:  # irq
+                    if exception_type in [1, 2, 5, 11]:
                         state = 10
                 if state in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
                     state += 1
@@ -288,6 +302,14 @@ class PQL_MIPS32(PQLI):
         mips_cpu_do_interrupt enter: PC bfc00380 EPC 801d0e9c instruction bus error exception   15
         mips_cpu_do_interrupt: PC bfc00380 EPC 801d0e9c cause 6                                 16
             S 10400002 C 00000018 A 00000000 D 00000000                                         17
+        do_raise_exception_err: 26 0                                                            14
+        mips_cpu_do_interrupt enter: PC 80008e20 EPC 00000000 TLB load exception                15
+        mips_cpu_do_interrupt: PC bfc00380 EPC 80008e20 cause 2                                 16
+            S 00400002 C 00000008 A 000000a0 D 00000000                                         17
+        do_raise_exception_err: 20 0                                                            14
+        mips_cpu_do_interrupt enter: PC 80448320 EPC 00000000 reserved instruction exception    15
+        mips_cpu_do_interrupt: PC bfc00380 EPC 80448320 cause 10                                16
+            S 00400006 C 00000028 A 00000000 D 00000000                                         17
         """
         ln = 0
         cpurfs = {}
@@ -391,6 +413,9 @@ class PQL_MIPS32(PQLI):
 
         with open('cpu.json', 'w') as f:
             json.dump(cpurfs, f)
+
+    def get_ra(self, cpurf):
+        return cpurf['register_files']['ra']
 
     def get_pc(self, cpurf):
         return cpurf['register_files']['pc']
