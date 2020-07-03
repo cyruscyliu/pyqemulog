@@ -1,27 +1,19 @@
 import abc
 import json
 
-PQL_ARCH_AARCH32 = 0
-PQL_ARCH_AARCH64 = 1
-PQL_ARCH_MIPS32 = 2
-PQL_ARCH_MIPS64 = 3
-
-PQL_BIG_ENDIAN = 0
-PQL_LITTLE_ENDIAN = 1
-
 
 class PQLI(object):
-    def __init__(self, endian, path_to_qemulog):
+    def __init__(self, endian, tracefile):
         self.endian = endian
         self.cpurfs = None
         self.bbs = None
-        self.path_to_qemulog = path_to_qemulog
+        self.tracefile = tracefile
 
     @abc.abstractmethod
-    def load_cpurf(self, dump=True):
+    def load_cpurf(self):
         pass
 
-    def load_in_asm(self, dump=True):
+    def load_in_asm(self):
         """
         ----------------                                1
         IN:                                             2
@@ -46,7 +38,7 @@ class PQLI(object):
             operand = things[3:]
             return offset, address, raw, opcode, operand
 
-        with open(self.path_to_qemulog) as f:
+        with open(self.tracefile) as f:
             state = 0
             for line in f:
                 if state == 0 and line.startswith('---'):
@@ -77,12 +69,6 @@ class PQLI(object):
                 ln += 1
 
         self.bbs = bbs
-        if not dump:
-            return
-
-        # dump
-        with open('in_asm.json', 'w') as f:
-            json.dump(bbs, f)
 
     @abc.abstractmethod
     def get_ra(self, cpurf):
@@ -138,8 +124,8 @@ class PQLI(object):
 
 
 class PQL_AARCH32(PQLI):
-    def __init__(self, endian, path_to_qemulog):
-        super().__init__(endian, path_to_qemulog)
+    def __init__(self, endian, tracefile):
+        super().__init__(endian, tracefile)
         self.exception_names = [
             'unknown', 'ui', 'svc', 'pabt', 'dabt', 'irq',
             #   0       1      2       3       4      5
@@ -153,7 +139,7 @@ class PQL_AARCH32(PQLI):
     def get_pc(self, cpurf):
         return cpurf['register_files']['R15']
 
-    def load_cpurf(self, dump=True):
+    def load_cpurf(self):
         """
         R00=00000055 R01=000e11b0 R02=000f21c4 R03=00000661    1 <- 0
         R04=00000055 R05=00000001 R06=0000b9b0 R07=000e1170    2
@@ -204,7 +190,7 @@ class PQL_AARCH32(PQLI):
             return offset, rfs
 
         cpurf_id = 0
-        with open(self.path_to_qemulog) as f:
+        with open(self.tracefile) as f:
             state = 0
             for line in f:
                 if state == 0 and line.startswith('R00'):
@@ -258,17 +244,10 @@ class PQL_AARCH32(PQLI):
 
         self.cpurfs = cpurfs
 
-        if not dump:
-            return
-
-        # dump
-        with open('cpu.json', 'w') as f:
-            json.dump(cpurfs, f)
-
 
 class PQL_MIPS32(PQLI):
-    def __init__(self, endian, path_to_qemulog):
-        super().__init__(endian, path_to_qemulog)
+    def __init__(self, endian, tracefile):
+        super().__init__(endian, tracefile)
         self.exception_names = [
             'int', 'mod', 'tlbl', 'tlbs', 'adel',
             'ades', 'ibe', 'dbe', 'syscall', 'bp',
@@ -279,7 +258,7 @@ class PQL_MIPS32(PQLI):
             'cacheerr', 'reserved'
         ]
 
-    def load_cpurf(self, dump=True):
+    def load_cpurf(self):
         """
         pc=0x80005d0c HI=0x00000000 LO=0x00000000 ds 0090 80005d0c 0        1 <- 0
         GPR00: r0 00000000 at 1000001f v0 00000000 v1 00000000              2
@@ -345,7 +324,7 @@ class PQL_MIPS32(PQLI):
             return offset, rfs
 
         cpurf_id = 0
-        with open(self.path_to_qemulog) as f:
+        with open(self.tracefile) as f:
             state = 0
             for line in f:
                 if state == 0 and line.startswith('pc='):
@@ -408,11 +387,6 @@ class PQL_MIPS32(PQLI):
                 ln += 1
 
         self.cpurfs = cpurfs
-        if not dump:
-            return
-
-        with open('cpu.json', 'w') as f:
-            json.dump(cpurfs, f)
 
     def get_ra(self, cpurf):
         return cpurf['register_files']['ra']
@@ -421,8 +395,12 @@ class PQL_MIPS32(PQLI):
         return cpurf['register_files']['pc']
 
 
-def get_pql(arch, endian, path_to_qemulog):
-    if arch == 'aarch32':
-        return PQL_AARCH32(endian, path_to_qemulog)
+def get_pql(arch, tracefile):
+    if arch == 'arm':
+        return PQL_AARCH32('l', tracefile)
+    elif arch == 'mipsel':
+        return PQL_MIPS32('l', tracefile)
+    elif arch == 'mipseb':
+        return PQL_MIPS32('b', tracefile)
     else:
-        return PQL_MIPS32(endian, path_to_qemulog)
+        raise NotImplementedError('Unsupported arch {}'.format(arch))
