@@ -16,8 +16,7 @@ qemu-system-${ARCH} ... -d cpu,in_asm[,int] -D tracefile
 ```python
 from pyqemulog import get_pql
 
-path_to_qemulog = 'tracefile'
-pql = get_pql(ARCH, path_to_qemulog)
+pql = get_pql(ARCH, 'tracefile')
 pql.load_cpurf()
 pql.load_in_asm()
 
