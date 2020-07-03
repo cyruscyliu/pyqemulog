@@ -3,11 +3,12 @@ import json
 
 
 class PQLI(object):
-    def __init__(self, endian, tracefile):
+    def __init__(self, endian, tracefile, mode='standard'):
         self.endian = endian
         self.cpurfs = None
         self.bbs = None
         self.tracefile = tracefile
+        self.mode = mode
 
     @abc.abstractmethod
     def load_cpurf(self):
@@ -38,8 +39,8 @@ class PQLI(object):
             operand = things[3:]
             return offset, address, raw, opcode, operand
 
+        state = 0
         with open(self.tracefile) as f:
-            state = 0
             for line in f:
                 if state == 0 and line.startswith('---'):
                     state = 1
@@ -67,8 +68,8 @@ class PQLI(object):
                     new_bb['size'] = len(new_bb['instructions'])
                     state = 0
                 ln += 1
-
         self.bbs = bbs
+        return bbs
 
     @abc.abstractmethod
     def get_ra(self, cpurf):
@@ -80,7 +81,6 @@ class PQLI(object):
 
     def get_bb(self, cpurf):
         bb_id = self.get_pc(cpurf)
-
         target_bb = self.bbs[bb_id]
         max_ln = cpurf['ln']
         while target_bb['instructions'][-1]['ln'] < max_ln:
@@ -94,6 +94,9 @@ class PQLI(object):
         return target_bb
 
     def get_next_cpurf(self, cpurf):
+        if self.mode == 'generator':
+            raise ValueError(
+                'cannot support get_next_cpurf in the generator mode')
         try:
             return self.cpurfs[cpurf['id'] + 1]
         except KeyError:
@@ -103,6 +106,9 @@ class PQLI(object):
         return self.get_bb(self.get_next_cpurf(cpurf))
 
     def get_last_cpurf(self, cpurf):
+        if self.mode == 'generator':
+            raise ValueError(
+                'cannot support get_last_cpurf in the generator mode')
         try:
             return self.cpurfs[cpurf['id'] - 1]
         except KeyError:
@@ -124,8 +130,8 @@ class PQLI(object):
 
 
 class PQL_AARCH32(PQLI):
-    def __init__(self, endian, tracefile):
-        super().__init__(endian, tracefile)
+    def __init__(self, endian, tracefile, mode='plain'):
+        super().__init__(endian, tracefile, mode=mode)
         self.exception_names = [
             'unknown', 'ui', 'svc', 'pabt', 'dabt', 'irq',
             #   0       1      2       3       4      5
@@ -190,8 +196,8 @@ class PQL_AARCH32(PQLI):
             return offset, rfs
 
         cpurf_id = 0
+        state = 0
         with open(self.tracefile) as f:
-            state = 0
             for line in f:
                 if state == 0 and line.startswith('R00'):
                     state = 1
@@ -239,15 +245,17 @@ class PQL_AARCH32(PQLI):
                     state += 1
                 if state == 10:
                     state = 0
+                    if self.mode == 'generator':
+                        yield cpurfs[cpurf_id]
                     cpurf_id += 1
                 ln += 1
-
         self.cpurfs = cpurfs
+        return cpurfs
 
 
 class PQL_MIPS32(PQLI):
-    def __init__(self, endian, tracefile):
-        super().__init__(endian, tracefile)
+    def __init__(self, endian, tracefile, mode='plain'):
+        super().__init__(endian, tracefile, mode=mode)
         self.exception_names = [
             'int', 'mod', 'tlbl', 'tlbs', 'adel',
             'ades', 'ibe', 'dbe', 'syscall', 'bp',
@@ -383,10 +391,12 @@ class PQL_MIPS32(PQLI):
                     state += 1
                 if state == 18:
                     state = 0
+                    if self.mode == 'generator':
+                        yield cpurfs[cpurf_id]
                     cpurf_id += 1
                 ln += 1
-
         self.cpurfs = cpurfs
+        return cpurfs
 
     def get_ra(self, cpurf):
         return cpurf['register_files']['ra']
@@ -395,12 +405,12 @@ class PQL_MIPS32(PQLI):
         return cpurf['register_files']['pc']
 
 
-def get_pql(arch, tracefile):
+def get_pql(arch, tracefile, mode='plain'):
     if arch == 'arm':
-        return PQL_AARCH32('l', tracefile)
+        return PQL_AARCH32('l', tracefile, mode=mode)
     elif arch == 'mipsel':
-        return PQL_MIPS32('l', tracefile)
+        return PQL_MIPS32('l', tracefile, mode=mode)
     elif arch == 'mipseb':
-        return PQL_MIPS32('b', tracefile)
+        return PQL_MIPS32('b', tracefile, mode=mode)
     else:
         raise NotImplementedError('Unsupported arch {}'.format(arch))
