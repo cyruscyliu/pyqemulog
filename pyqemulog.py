@@ -406,7 +406,7 @@ class PQL_MIPS32(PQLI):
 
 
 def get_pql(arch, tracefile, mode='plain'):
-    if arch == 'arm':
+    if arch == 'armel':
         return PQL_AARCH32('l', tracefile, mode=mode)
     elif arch == 'mipsel':
         return PQL_MIPS32('l', tracefile, mode=mode)

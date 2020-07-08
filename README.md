@@ -29,7 +29,7 @@ for cpurf in pql.cpurfs.values():
 #### ARCH table
 |ARCH|arch|endian|
 |:-:|:-:|:-:|
-|arm|arm|l|
+|armel|arm|l|
 |mipsel|mips|l|
 |mipseb|mips|b|
 
