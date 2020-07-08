@@ -3,7 +3,7 @@ import json
 
 
 class PQLI(object):
-    def __init__(self, endian, tracefile, mode='standard'):
+    def __init__(self, endian, tracefile, mode='plain'):
         self.endian = endian
         self.cpurfs = None
         self.bbs = None
