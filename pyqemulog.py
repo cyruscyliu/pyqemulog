@@ -93,6 +93,14 @@ class PQLI(object):
                 target_bb = next_bb
         return target_bb
 
+    def get_cpurf(self):
+        if self.mode == 'generator':
+            for index, cpurf in enumerate(self.load_cpurf()):
+                yield index, cpurf
+        else:
+            for index, cpurf in self.cpurfs.items():
+                yield index, cpurf
+
     def get_next_cpurf(self, cpurf):
         if self.mode == 'generator':
             raise ValueError(
