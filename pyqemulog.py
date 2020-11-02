@@ -1,21 +1,50 @@
 import abc
 import json
 
+# You should import them for compatibility.
+ARM = 'arm'
+MIPS = 'mips'
+LITTLE = 'little'
+BIG = 'big'
+ARMEL = 'armel'
+MIPSEB = 'mipseb'
+MIPSEL = 'mipsel'
+
 
 class PQLI(object):
     def __init__(self, endian, tracefile, mode='plain'):
+        """
+        PQL interfaces should be extended by any specific PQL classes.
+        """
         self.endian = endian
         self.cpurfs = None
         self.bbs = None
         self.tracefile = tracefile
         self.mode = mode
 
-    @abc.abstractmethod
     def load_cpurf(self):
+        """
+        Load cpu register files from the tracefile.
+
+        If mode='generator', this function become a generator.
+        In this mode, you can use get_cpurf() directly to load cpurf implicitly.
+
+        If mode='plain', this function will process the whole tracefile without any stop.
+        In this mode, this function has to be called before get_cpurf().
+        """
+        if self.mode == 'generator':
+            return self.load_cpurf_generator()
+        for i in self.load_cpurf_generator():
+            pass
+
+    @abc.abstractmethod
+    def load_cpurf_generator():
         pass
 
     def load_in_asm(self):
         """
+        Load basic blocks from the trace file.
+
         ----------------                                1
         IN:                                             2
         0x00000000:  e3a00000  mov      r0, #0          3
@@ -73,13 +102,16 @@ class PQLI(object):
 
     @abc.abstractmethod
     def get_ra(self, cpurf):
+        """Get linked register in the cpurf."""
         pass
 
     @abc.abstractmethod
     def get_pc(self, cpurf):
+        """Get pc in the cpurf."""
         pass
 
     def get_bb(self, cpurf):
+        """Get the basic block associated to the cpurf."""
         bb_id = self.get_pc(cpurf)
         target_bb = self.bbs[bb_id]
         max_ln = cpurf['ln']
@@ -153,7 +185,7 @@ class PQL_AARCH32(PQLI):
     def get_pc(self, cpurf):
         return cpurf['register_files']['R15']
 
-    def load_cpurf(self):
+    def load_cpurf_generator(self):
         """
         R00=00000055 R01=000e11b0 R02=000f21c4 R03=00000661    1 <- 0
         R04=00000055 R05=00000001 R06=0000b9b0 R07=000e1170    2
@@ -258,7 +290,6 @@ class PQL_AARCH32(PQLI):
                     cpurf_id += 1
                 ln += 1
         self.cpurfs = cpurfs
-        return cpurfs
 
 
 class PQL_MIPS32(PQLI):
@@ -274,7 +305,7 @@ class PQL_MIPS32(PQLI):
             'cacheerr', 'reserved'
         ]
 
-    def load_cpurf(self):
+    def load_cpurf_generator(self):
         """
         pc=0x80005d0c HI=0x00000000 LO=0x00000000 ds 0090 80005d0c 0        1 <- 0
         GPR00: r0 00000000 at 1000001f v0 00000000 v1 00000000              2
@@ -404,7 +435,6 @@ class PQL_MIPS32(PQLI):
                     cpurf_id += 1
                 ln += 1
         self.cpurfs = cpurfs
-        return cpurfs
 
     def get_ra(self, cpurf):
         return cpurf['register_files']['ra']
@@ -413,12 +443,35 @@ class PQL_MIPS32(PQLI):
         return cpurf['register_files']['pc']
 
 
-def get_pql(arch, tracefile, mode='plain'):
-    if arch == 'armel':
+def __get_pql_compacted(arch_e_endian, tracefile, mode='plain'):
+    if arch_e_endian == ARMEL:
         return PQL_AARCH32('l', tracefile, mode=mode)
-    elif arch == 'mipsel':
+    elif arch_e_endian == MIPSEL:
         return PQL_MIPS32('l', tracefile, mode=mode)
-    elif arch == 'mipseb':
+    elif arch_e_endian == MIPSEB:
         return PQL_MIPS32('b', tracefile, mode=mode)
     else:
+        raise NotImplementedError('Unsupported arch/endian {}'.format(arch_e_endian))
+
+
+def __get_pql_separated(arch, endian, tracefile, mode='plain'):
+    if arch == ARM:
+        return PQL_AARCH32('l', tracefile, mode=mode)
+    elif arch == MIPS:
+        if endian == LITTLE:
+            return PQL_MIPS32('l', tracefile, mode=mode)
+        elif endian == BIG:
+            return PQL_MIPS32('b', tracefile, mode=mode)
+        else:
+            raise NotImplementedError('Unsupported endian {}'.format(endian))
+    else:
         raise NotImplementedError('Unsupported arch {}'.format(arch))
+
+
+def get_pql(*args, mode='plain'):
+    if args[0] in [ARMEL, MIPSEL, MIPSEB]:
+        return __get_pql_compacted(args[0], args[1], mode=mode)
+    elif args[0] in [ARM, MIPS]:
+        return __get_pql_separated(args[0], args[1], args[2], mode=mode)
+    else:
+        raise NotImplementedError('Unsupported input arguments {}'.format(args))
