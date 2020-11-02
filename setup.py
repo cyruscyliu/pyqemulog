@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pyqemulog',
-    version='v1.1.0',
+    version='v1.2.0',
     py_modules=['pyqemulog'],
     url='https://github.com/cyruscyliu/pyqemulog',
     license='MIT',
