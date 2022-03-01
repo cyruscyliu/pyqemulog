@@ -17,7 +17,7 @@ Develop your script to parse the `tracefile`.
 from pyqemulog import get_pql
 from pyqemulog import ARM, MIPS, LITTLE, BIG, ARMEL, MIPSEL, MIPSEB
 
-pql = get_pql(ARM, LITTLE, 'tracefile') 
+pql = get_pql(ARM, LITTLE, 'tracefile')
 pql.load_cpurf()
 pql.load_in_asm()
 
@@ -27,6 +27,6 @@ for cpurf in pql.cpurfs.values():
     print(cpurf) # bb's cpu register files
 ```
 
-## Contribution
+## Contact
 
-It's welcome to contribute pyqemulog!
+If you have any problems, please fire issues!
